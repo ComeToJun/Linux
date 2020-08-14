@@ -1,0 +1,143 @@
+cat
+
+more
+
+less
+
+cpm
+
+comm
+
+diff
+
+링크 거는 방법
+ln hard-file hfile
+명령어 원래파일이름 바꿀파일이름
+
+hard link  파일은 해당 inode 를 레퍼런스 하기 때문에
+원본이 지워져도 레퍼런스 하는 파일이 남게 됨
+
+즉, 위에껄로 예를 들면 hfile 은 inode 를 레퍼런스 하기 때문에
+hard-file 이 지워져도 hfile 은 남아있게 된다.
+
+ln -s Symbolic-file sfile
+
+심볼릭으로 만들게 되면, 원본 파일이 지워졌을때 같이 없어짐(이름은 남지만 쓸모없음)
+sfile 은 symbolic_file 이름을 레퍼런스 하기 때문에 해당 레퍼런스가 없어지게 되면
+sfile 역시 의미가 없어지게 됨.
+
+cat 으로 각 이름을 검색해보면, hfile 은 존재하지만 sfile 은 빨간색으로 표시됨
+다시 rm 으로 지워서 깔끔하게 만들면 된다.
+
+
+
+tar (Tape ARchiver)
+
+tar cvf 
+    자동으로 파일 묶을때는 cvf 다음 묶을디렉토리.tar 묶을디렉토리
+
+
+tar xvf 
+     파일 풀때 xvf 풀디렉토리.tar
+
+풀기전에 파일 한번 확인하기
+tar tvf nest01.tar <- 디렉토리이름.tar
+
+
+
+압축하기
+
+gzip -(숫자:1~9 옵션줄 수 있음 1 <- 압축이 가장 빠르고 9가 느림, 9 <-압축률이 높고 낮으면 1)
+
+gzip -숫자v 해당파일 이름 ( v 는 과정을 보여준다. 있어도 없어도 괜찮음)
+gzip -숫자 해당파일 이름
+
+압축풀기
+
+gzip -dv 해당파일 이름.gz ( 마찬가지로 v 없어도 됨 )
+
+
+
+tar 로 묶고 압축하기
+tar zcvf nest01.tar.gz nest01
+
+nest01 <- 디렉토리이름
+
+
+tar 로 묶고 압축한거 풀기
+tar zxvf nest01.tar.gz
+
+
+
+
+변수명은 관례상 대문자로 한다.
+AA="aaaaa"
+echo $AA
+aaaaa
+
+
+
+
+#!/bin/bash
+
+이 이하에 나오는 모든 것들을 바쉬셀로 실행하라
+
+
+
+리눅스에서 코드 불러오기, for loop 사용하기
+
+
+$0 현재 스크립트의 파일명
+$n 쉘 스크립트 실행 시 주는 인자($1 부터)
+$# 스크립트에 제공된 인자의 수
+$* 스크립트에 제공된 모든 인자
+$@ $*과 같지만 개별 묶음
+$? 마지막 명령어 실행 종료 코드
+$$ 현재 실행되는 쉘스크립트의 PID
+$! 마지막 백그라운드 명령어의 PID
+
+시험문제
+
+
+유일하게 헷갈리는건
+$* 스크립트에 제공된 모든 인자
+$@ $*과 같지만 개별 묶음
+
+$*  <- " " 파일 안에서 감싸주면 전체 문장이 나온다
+
+$@ <- " " 파일 안에서 감싸주고 밖에서 감싸준 문장만 따로 나온다.
+
+
+
+
+#!/bin/bash
+
+if [ "$#" -lt 1 ]   <-인자의 개수가 1보다 작으면(less than)   ## if 다음은  [ ]
+then
+    echo "$# is Illegal number of parameters."
+    echo "Usage: $0 [options]"   <-현재 파일명
+    exit 1   <- 빠져나가는데 1로 빠져나가는것
+fi		<- if 문의 끝은 fi로 끝남 else if
+args=("$@")   <- 배열로 처리해줄때는 () 가 필요함
+
+for((c=0; c<$#; c++))    <- ; 를 인식해주기 위해 (( )) 두개를 해줌
+do
+    echo "$c th parameter = ${args[$c]}";     # args[$c] 를 먼저 진행하고
+done				         { } 덮어서 전체를 다시 적용.
+
+
+
+chmod 775 test08.sh
+
+
+
+./test08.sh java c c++ python scala mongoDB
+0 th parameter = java
+1 th parameter = c
+2 th parameter = c++
+3 th parameter = python
+4 th parameter = scala
+5 th parameter = mongoDB
+
+
+
