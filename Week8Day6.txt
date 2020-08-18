@@ -1,0 +1,410 @@
+awk 유틸리티에 대해서 알아보자
+
+vi awkfile 을 만들자 
+
+James   Dean    176 1974/10/24  2345987
+Mat     Daemon  181 1980/04/02  2328923
+Kate    Moss    179 1975/05/21  2319472
+Harrison Ford   193 1965/08/12  234518
+
+awk '{print $0}' awkfile 입력
+
+James   Dean    176 1974/10/24  2345987
+Mat     Daemon  181 1980/04/02  2328923
+Kate    Moss    179 1975/05/21  2319472
+Harrison Ford   193 1965/08/12  234518
+
+awk 가 파일을 받으면 라인단위로 읽어 처리한다.
+$0 는 라인 전체를 의미한다. 즉, 한라인 읽어서 한라인 처리
+
+awk '{print $1}' awkfile 입력
+
+James
+Mat
+Kate
+Harrison
+
+이름만 나온거.
+
+awk '{print $1, $2}' awkfile 입력
+
+James Dean
+Mat Daemon
+Kate Moss
+Harrison Ford
+
+
+
+
+더 나아가 단순 스크립트만 제공하는 것이 아닌
+
+
+awk '/Moss/' awkfile  입력
+
+Kate    Moss    179 1975/05/21  2319472
+
+Moss 를 찾아내 그 행을 전부 보여줌
+
+awk '/at/{print "\tGood Morning, "$1, $2}' awkfile
+
+        Good Morning, Mat Daemon
+        Good Morning, Kate Moss
+
+at 들어가 있는 것을 찾아서 앞에  tap 넣어주고 Good Morning 넣어준 것 중 첫번째 두번째 열 출력
+
+
+                              20자리확보해서 왼쪽 정렬
+awk '{printf "The name is %-20s Height is %4d\n", $1" "$2, $3}' awkfile
+    프린트포맷 " " 포맷준거, $1 이름                    ,       ,  기준으로 첫번째가 20 두번째가 4
+The name is James Dean           Height is  176
+The name is Mat Daemon         Height is  181
+The name is Kate Moss            Height is  179
+The name is Harrison Ford        Height is  193
+             20자리 여유 주고 왼쪽 정렬(이름)  3번째꺼 4칸 잡아서 우측정렬(키)
+
+
+서식 처리 가능.
+if 나 while 도 가능
+
+
+awk '{print NR, $0}' awkfile
+1 James   Dean    176 1974/10/24  2345987
+2 Mat     Daemon  181 1980/04/02  2328923
+3 Kate    Moss    179 1975/05/21  2319472
+4 Harrison Ford   193 1965/08/12  234518
+
+NR = number of record
+한 라인씩 가져올때마다 숫자를 붙여줌
+
+
+
+awk '/^[d]/{ print $0}'
+drwxrwxr-x. 2 jun jun  43  8월 14 11:18 nest01
+
+d 로 시작하는 것을 찾아라 즉, 디렉토리를 찾아라
+
+
+
+awk '/^[^d]/{ print $0}'
+
+-rw-rw-r--. 1 jun jun 159  8월 18 09:19 awkfile
+-rw-rw-r--. 1 jun jun  22  8월 14 10:22 hfile
+-rwxrwxr-x. 1 jun jun  67  8월 14 14:34 test01.sh
+-rwxrwxr-x. 1 jun jun  48  8월 14 14:36 test03.sh
+-rwxrwxr-x. 1 jun jun  49  8월 14 14:39 test04.sh
+-rwxrwxr-x. 1 jun jun  52  8월 14 14:44 test05.sh
+-rwxrwxr-x. 1 jun jun 216  8월 14 15:09 test06.sh
+-rwxrwxr-x. 1 jun jun  55  8월 14 15:17 test07.sh
+-rwxrwxr-x. 1 jun jun 213  8월 14 15:45 test08.sh
+
+d 로 시작하는걸 빼고 다 나오게 해라
+
+
+[jun@localhost ~/test01]$ ls -l | awk '/^[^d, l]/{ print $0}'
+[jun@localhost ~/test01]$ ls -l | awk '/^[^dl]/{ print $0}'
+[jun@localhost ~/test01]$ ls -l | awk '/^[\-]/{ print $0}'
+
+
+-rw-rw-r--. 1 jun jun 159  8월 18 09:19 awkfile
+-rw-rw-r--. 1 jun jun  22  8월 14 10:22 hfile
+-rwxrwxr-x. 1 jun jun  67  8월 14 14:34 test01.sh
+-rwxrwxr-x. 1 jun jun  48  8월 14 14:36 test03.sh
+-rwxrwxr-x. 1 jun jun  49  8월 14 14:39 test04.sh
+-rwxrwxr-x. 1 jun jun  52  8월 14 14:44 test05.sh
+-rwxrwxr-x. 1 jun jun 216  8월 14 15:09 test06.sh
+-rwxrwxr-x. 1 jun jun  55  8월 14 15:17 test07.sh
+-rwxrwxr-x. 1 jun jun 213  8월 14 15:45 test08.sh
+
+심볼릭 파일도 없게 할 수 있다. 앞에 나오는 d 와 l 을 빼고 나오게 한다.
+
+
+
+ls -l | awk 'BEGIN{print"<sum of files>"}{sum+=$5}END{print sum}'   $5번째 값을 전부 더해라
+<sum of files>
+924
+
+모든 파일의 용량값을 학인해볼 수 있다
+
+ls -l | awk '{sum+=$5}END{print sum/NR-1}'                   
+
+76.8333
+
+평균 구해주는 방법 ( ls -l 에서 합계가 나오는데 이 값은 $5 만 sum 을 했기 때문에 값에 들어가진 않으나, NR 로 나눌때 포함되기 때문에 -1 을 해주는게 맞다.)
+** 앞의 print 는 처음에 나올 제목을 프린트 하기 때문에 넣어도 안넣어도 상관없다.
+
+vi cal_main.c
+
+vi int_add.c
+
+두개의 c 언어로 만들어지는 함수형 파일을 만들어 놓고
+
+gcc -o cal_main.c
+gcc -o int_add.c
+
+로 cal_main.o int_add.o 파일이 만들어지고
+
+gcc -o cal_main int_add.p cal_main.o  입력시
+
+cal_main 이라는 실행파일이 만들어진다
+
+ ./cal_main  명령어로 실행 파일 실행 가능
+
+
+
+
+TARGET : Dependancy 
+Command
+
+무언가를 만들기 위해선 Dependancy 가 있어야 한다. 
+Dependancy 를 갖고 Command 로 만들 수 있다.
+
+TARGET 요리
+Dependancy 재료
+Command 조리법
+
+
+TARGET     Dependancy
+cal_main:   int_add.o cal_main.o
+    gcc -o cal_main int_add.o cal_main.o
+         Command
+
+TARGET    Dependancy
+int_add.o:  int_add.c
+    gcc -c int_add.c
+	Command
+
+TARGET     Dependancy
+car_main.o: car_main.c
+    gcc -c car_main.c
+	Command
+
+
+순서는 뒤집어도 상관없다. (하지만, 제대로 정리해놓지 않으면 보는 사람 입장에서 답답할 수 있음)
+결과적으로 파일을 전부 읽고나서 필요한 것부터 진행한다.
+
+
+
+
+
+
+
+
+
+
+하둡
+
+아들 or 딸이 갖고 놀던 인형이 코끼리였음
+
+여러군데 있는 파일들을 한군데 모아서 보여주려고 하다보니, 새로운게 필요해졌고, 그래서 하둡이 만들어져서 나오게 됨
+
+하둡 설치
+
+1. 구글 프로토콜 버프를 설치한다.
+https://github.com/protocolbuffers/protobuf/releases/tag/v2.5.0
+
+맨 밑에
+protobuf-2.5.0.tar.gz
+
+이걸 받을건데 우측 마우스 클릭
+링크 주소 복사
+
+root 들어가서 
+cd /url/local 에서
+wget 링크 주소 붙이기 / 다운로드 가능
+
+
+하둡 전용계정을 보통 만들어서 하는데, 우리는 여기를 하둡전용계정이라고 생각하고 진행한다.
+
+파일 압축 풀어주기
+tar zxcf protobuf-2.5.0.tar.gz
+
+깔고 나서는 압축 전 파일 지워주기
+
+rm -fR protobuf-2.5.0.tar.gz
+
+cd protobuf-2.5.0
+
+configure 실행해야함
+
+./configure  실행  -> makefile 을 만들어주는 것.(자동화로 만들어둔것)
+
+config.status: creating Makefile
+
+make 입력 하면 알아서 해준다.
+
+make install 입력
+
+정상적으로 설치가 되었는지 확인하기 위해선
+protoc --version
+
+libprotoc 2.5.0
+
+구글 프로토콜 설치 완료
+
+
+하둡을 설치할때는 Fully distributed 모드로 설치하는데 이건 실제 서비스용이다.
+
+기계한대로 여러대가 있는것처럼 할 수 있는게, 가상분산모드
+ - 조금 느리지만 학습용으로 체험해볼 수 있기 때문에 직접적으로 느껴볼 수 있음
+
+
+https://hadoop.apache.org/
+
+아파치하둡 접속 download 접속
+
+하둡의 버전 업 속도를 다른것들이 따라가지 못하기 때문에
+버전을 낮춰서 진행한다.
+
+All previous releases of Hadoop are available from the Apache release archive site.
+
+여기 찾아서 눌러서 이동
+
+2.7.2 버전을 사용할 예정
+
+들어가면 위 세개는 직접 소스를 받아서 컴파일 하고 싶은 사람은 할 것 src
+
+우리는 밑에 tar.gz 를 받는다. 
+링크주소 복사 해서
+
+홈 디렉토리 이동 후, 
+wget 후에 주소 붙여넣어서 다운로드 받기
+
+
+
+
+
+
+하둡의 맵리듀스
+데이터를 보낼 수 있는 상황이 아니기 때문에
+데이터가 있는 쪽으로 프로그램을 보내서 프로그램을 실행시킨다.
+
+우리가 알고 있는 Counter 함수의 작업을 하드프레임워크에서 해준다.
+
+map 함수를 지나가면 키 밸류 값을 받는다.
+
+suffle and sorting
+
+Reduce (같은 것끼리 모아서 카운트)
+
+
+
+
+
+저사양의 pc 를 클러스터 해서 하나의 pc 로 사용 가능한게 하둡. 
+
+쓰다보니 괜찮아서 하둡 에코 시스템으로 다른 것들을 하나하나 만들기 시작
+
+문제가 생기는게 하둡이 전부 점유해버림
+
+flexible 하게 쓸 수 있게 하자는 요구가 생기기 시작
+
+2.0 버전부터 얀을 같이 사용하기 시작
+
+먼저와의 차이점은 하둡이 놀고 있을때는 하둡이 쓰던 부분을 다른 애들이 쓸 수 있게 해주고
+반대로 하둡이 더 필요할때는 더 사용할 수 있게 해주는 것.
+
+즉, 효율적으로 이용이 가능하게 만들어주었다는 점에서 의미가 있다.
+
+Node Manager 가 있고 그 안에 App master 가 있다.
+
+https://nive.tistory.com/?page=12
+정리 잘해놨으니 한번 볼 것.
+
+
+
+얀을 쓰고 안쓰고에 따라 설정 기반이 달라진다.
+우리는 얀 기반으로 할거다
+
+
+가상분산모드
+- 네임노드 1 대
+-세컨더리네임노드 1 대 
+-데이터노드 2 대
+
+이정도만 해놓고 하자. 원래 정상적으로 할거면 3대는 필요
+
+
+호스트네임 (언더바 (_) 넣지 말 것)
+hadoopnode 01~ 04
+
+
+ls -l /etc/hosts
+root 만 가능하기에 root 로 진행
+
+sudo vi /etc/hosts 들어가서
+
+10.0.2.15    hadoopnode01
+10.0.2.15    hadoopnode02
+10.0.2.15    hadoopnode03
+10.0.2.15    hadoopnode04
+
+만들어주기
+
+
+java 최신버전으로 업그레이드 시켜주기
+
+jdk 개발자 버전으로 받아주기
+yum install java-1.8.0-openjdk-devel.86_64
+
+
+jps 입력해서 Jps 나오면 깔린것
+
+
+Hadoop 의 모든 프로세스는 자바 기반이니까 Jps 가 필요함.
+Java process status -> 하둡 실행시 프로세스가 제대로 되고 있는지 확인할 수 있게 해주는 것.
+
+ ls -l /usr/lib/jvm
+
+java-1.8.0-openjdk-1.8.0.262.b10-0.el7_8.x86_64
+
+확인
+
+ls -l /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.262.b10-0.el7_8.x86_64/
+ls -l /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.262.b10-0.el7_8.x86_64/bin
+
+확인해보기
+
+
+vi .bashrc
+
+밑에 환경변수로 
+export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.262.b10-0.el7_8.x86_64
+export PATH=$PATH:$JAVA_HOME/bin
+export CLASS_PATH=.:$JAVA_HOME/lib/tools.jar
+
+
+
+만들어 둘 것
+
+. .bashrc
+
+bashrc 가 만들어둔걸 적용하기 위해
+
+
+그다음
+sudo vi /etc/ssh/sshd_config
+
+
+ssh 는 기본으로 22번 포트 사용
+default 가 막혀있어서 이걸 풀어줘야 함
+
+Port22 찾아서 앞에 있는 # 없애주고 저장
+
+sudo firewall-cmd --permanent --zone=public --add-port=22/tcp
+22번 포트 방화벽 풀어줌
+ ** 나중에 포트 번호만 바꿔서 또 해줄 수 있음
+success
+
+centos 에서 프로그램->잡다->설정:영구적, public 포트 보면 22 tcp 로 설정하는걸 명령어로 해준 것.
+
+
+success 나왔다면 reboot 해주고 다시 putty 로 접속하면
+
+[jun@hadoopnode01 ~]$ 
+
+(hadoopnode)으로 바뀐걸 볼 수 있음
+
+
+
+
+
