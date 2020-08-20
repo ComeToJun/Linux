@@ -1,0 +1,185 @@
+wordcount 를 직접 구현해보자
+
+
+
+Maven
+Grradle
+
+build management 가 주 기능
+
+이클립스
+file  -> new -> other -> Maven -> Maven project 선택
+
+Create simple project 선택해서 진행할것.
+
+Group 안의 프로젝트들을 관리할 것
+
+Group Id 만들 것. 보통 도메인 주소를 많이 사용한다 ( 충돌이 일어나지 않게 하기 위해)
+
+Version 이 중요한데,
+0.0.1 로 정하고 넘어갈 것
+
+finish 누르면
+pom.xml 이 생기게 된다.
+
+의미는 없지만, 우리가 봐야할건 버전정보
+
+버전을 서로 맞춰줘야 함
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.jun</groupId>
+  <artifactId>com.jun</artifactId>
+  <version>0.0.1</version>
+  
+  	<build>
+  		<plugins>
+  			<plugin>
+  				<groupId>org.apache.maven.plugins</groupId>
+  				<artifactId>maven-compiler-plugin</artifactId>
+  				<version>3.6.1</version>
+  				<configuration>
+  					<source>1.8</source>
+  					<target>1.8</target>
+  				</configuration>
+  			</plugin>
+  		</plugins>
+  	</build>
+  	
+  	
+</project>
+
+
+자바 버전은 본인이 갖고 있는 버전으로 맞춰주고 ( 나는 14였는데, 13밖에 없어서 13으로 진행 )
+Maven 에서 받을땐 1.8 로 진행한다고 한다.
+
+- Maven은 필요한 라이브러리를 특정 문서(pom.xml)에 정의해 놓으면 내가 사용할 라이브러리 뿐만 아니라 
+해당 라이브러리가 작동하는데에 필요한 다른 라이브러리들까지 관리하여 네트워크를 통해서 자동으로 다운받아 준다.
+- Maven은 중앙 저장소를 통한 자동 의존성 관리를 중앙 저장소(아파치재단에서 운영 관리)는 라이브러리를 공유하는 
+파일 서버라고 볼 수 있고, 메이븐은 자기 회사만의 중앙 저장소를 구축할수도 있다. 
+- 간단한 설정을 통한 배포 관리가 가능 하다.
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.jun</groupId>
+  <artifactId>com.jun</artifactId>
+  <version>0.0.1</version>
+  
+  	<build>
+  		<plugins>
+  			<plugin>
+  				<groupId>org.apache.maven.plugins</groupId>
+  				<artifactId>maven-compiler-plugin</artifactId>
+  				<version>3.6.1</version>
+  				<configuration>
+  					<source>1.8</source>
+  					<target>1.8</target>
+  				</configuration>
+  			</plugin>
+  		</plugins>
+  	</build>
+  	<dependencies>   <- 추가
+  	
+  	 </dependencies>  <- 추가
+</project>
+
+https://mvnrepository.com/search?q=hadoop-common   <-이동해서 맨위에 하둡으로 들어갈 것
+밑으로 가다보면 우리가 사용하는  2.7.2 가 나옴
+
+
+안에 들어가서 밑에 있는 코더 클릭하면 복사
+
+복사해서 dependencies 안에 붙이기
+
+
+https://mvnrepository.com/search?q=hadoop-mapreduce+core <- 이동해서 맨위 하둡으로 들어갈 것
+2.7.2 접속
+
+코더 클릭해서 복사
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.jun</groupId>
+  <artifactId>com.jun</artifactId>
+  <version>0.0.1</version>
+  
+  	<build>
+  		<plugins>
+  			<plugin>
+  				<groupId>org.apache.maven.plugins</groupId>
+  				<artifactId>maven-compiler-plugin</artifactId>
+  				<version>3.6.1</version>
+  				<configuration>
+  					<source>1.8</source>
+  					<target>1.8</target>
+  				</configuration>
+  			</plugin>
+  		</plugins>
+  	</build>
+  	<dependencies>
+  	<!-- https://mvnrepository.com/artifact/org.apache.hadoop/hadoop-common -->
+		<dependency>
+			<groupId>org.apache.hadoop</groupId>
+			<artifactId>hadoop-common</artifactId>
+			<version>2.7.2</version>
+		</dependency>
+  	<!-- https://mvnrepository.com/artifact/org.apache.hadoop/hadoop-mapreduce-client-core -->
+		<dependency>
+    		<groupId>org.apache.hadoop</groupId>
+    		<artifactId>hadoop-mapreduce-client-core</artifactId>
+    		<version>2.7.2</version>
+		</dependency>
+  	
+  	 </dependencies>
+</project>
+
+
+이런식으로 나오는데, 저장 하면 관련 리소스들을 전부 다운받기 시작할거다.
+
+이상태에서 왼쪽 위에 있는 빨간색 엑스박스를 해결하자
+왼쪽 위 프로젝트 마우스 대고 오른쪽 마우스 버튼 클릭
+Maven 찾아서 update project 누르고 ok 해주면 다시 뭔가를 다운받으면서 빨간 엑스가 없어진다.
+
+2개의 라이브러리를 쓰겠다고 했는데, 그걸 위해서 사용해야 하는 것들이 엄청나게 많음
+
+
+
+
+이렇게까지 되면 코딩할 준비가 끝났다고 볼 수 있다.
+
+src/main/java 에 새로운 패키지를 만든다.
+3개 만들어서 나눈다.
+driver
+map
+reduce
+
+map 패키지에 WordCountMapper 클라스를 만든다.
+
+자바에서 전부 코딩한 뒤에
+
+[jun@hadoopnode01 ~/hadoop/share/hadoop]$ mkdir /mnt/share/java
+[jun@hadoopnode01 ~/hadoop/share/hadoop]$ ls -l /mnt/share
+합계 0
+drwxrwx---. 1 root vboxsf 0  8월 13 15:31 Practice
+drwxrwx---. 1 root vboxsf 0  8월 14 10:48 download
+drwxrwx---. 1 root vboxsf 0  8월 20 14:22 java
+
+D:\OracleVbox_jun\vboxshare에 가서
+자바 파일 만들어서 거기다가 
+D:\Junjava\Javajuncomplete\com.jun\target 에 있는 com.jun-0.0.1.jar 파일 적어놓기
+
+
+다운로드 폴더에 메모장 하나 아무거나(junjoke.txt) 적어서 넣어놓기
+[jun@hadoopnode01 ~/hadoop]$ bin/hdfs dfs -mkdir word-input2
+[jun@hadoopnode01 ~/hadoop]$ bin/hdfs dfs -put /mnt/share/download/junjoke.txt word-input2
+[jun@hadoopnode01 ~/hadoop]$ bin/yarn jar /mnt/share/java/com.jun-0.0.1.jar com.jun.driver.WordCount word-input2 word-output2
+
+
+[jun@hadoopnode01 ~/hadoop]$ bin/hdfs dfs -ls word-output2
+-rw-r--r--   1 jun supergroup          0 2020-08-20 14:38 word-output2/_SUCCESS
+-rw-r--r--   1 jun supergroup       3039 2020-08-20 14:38 word-output2/part-r-00000
+
+
+[jun@hadoopnode01 ~/hadoop]$ bin/hdfs dfs -cat word-output2/part-r-00000
+
+카운트 된 단어를 확인할 수 있다.
