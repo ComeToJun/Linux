@@ -1,0 +1,41 @@
+덩어리 있는 실제 데이터를 갖고 해보자
+
+http://stat-computing.org/dataexpo/2009/the-data.html
+
+https://packages.revolutionanalytics.com/datasets/AirOnTime87to12/
+
+항공관련 파일을 받을 수 있음
+
+1년치 분석
+
+2012 년 1년치 데이터의 헤드를 전부 지우고 (notepad 이용할 것)
+리눅스 하둡에 들어간다 (로그인 sbin/)
+
+
+[jun@hadoopnode01 ~/hadoop]$ bin/hdfs dfs -mkdir airline_dep_delay_input    <- 새로운 폴더를 만들어서
+[jun@hadoopnode01 ~/hadoop]$ bin/hdfs dfs -put /mnt/share/download/*csv airline_dep_delay_input   <- 그안에 헤드를 지운 모든 파일을 넣는다.
+
+
+자바에서 Maven 프로젝트 생성하고 pom 만 그대로 적용하고, Maven 업데이트 진행할 것
+
+패키지를 따로 만들어서 
+commen
+driver
+mapper
+reducer 
+
+4개를 만들건데
+
+보통 3개가 필요하지만 (wordcounter 를 위해서)
+
+common 을 만들어서 parser 를 만들어 둘 것.
+
+패키지 안에 클라스 를 만들어서 진행
+
+
+어제 했던 자바 프로그래밍과 비슷한 느낌
+
+자바에서 파일을 연동시켜 wordcount 를 얻어낼 수 있다.
+
+데이터가 작다면, pandas 에서도 가능하지만, 빅데이터는 자바에서 하둡을 이용해 더 큰 데이터를 다루고
+다룬 작아진 데이터를 pandas 에서 그래프나 머신러닝으로 나타낼 수 있게 해준다.
