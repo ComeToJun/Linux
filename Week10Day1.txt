@@ -1,0 +1,67 @@
+hdfs 에서 정리한 자료를 뽑아내는 방법
+
+[jun@hadoopnode01 ~/hadoop]$ bin/hdfs dfs -get airline_dep_delay_output/part-r-00000 ../test01/
+ 							 	이거를 ->     여기로
+								.. <- 의미는 test01파일이 위에 있으니까 여기로 넣겠다.
+
+
+파일 하나의 단위가 128M 이상이면 다음 파일로 만들어서 00000 000001 방식으로 만들어준다.
+
+쪼개져있는 파일들을 하나로 합쳐서 가져오고 싶다면?
+[jun@hadoopnode01 ~/test01]$ bin/hdfs dfs -getmerge airline_dep_delay_output ../test01/part-merged
+
+
+
+
+자바를 이용해서 도착지연을 구해봐라!
+
+W9D3 메모장을 참고하면 할 수 있다. 단지 Departure 를 Arrive 로 바꿔 진행했을뿐
+
+이런 과정을 한번에 끝낼 수 있지는 않을까?
+
+자바 이클립스에서 공용 Mapper 클래스를 만든다.
+
+String workType 필드 로 어떻게 적용을 하는가에 따라 다르게 가능 
+어떤걸 구할지 우리가 적용가능
+
+자바에서 새롭게 만든다 ( 이클립스에서 확인 가능 )
+
+
+bin/yarn jar /mnt/share/java/airline-0.0.3.jar com.jun.hadoop.driver.DelayCount 
+-D workType=departure airline_dep_delay_input dep_delay_output
+
+-D workType=departure 
+-D workType=arrive 
+
+이런식으로 옵션을 따로 주면 구할 수 있다.
+
+
+
+하둡은 맵리듀스 잡의 진행 상황을 모니터링 할 수 있게 Counter 라는 API를 제공
+모든 잡은 다수의 내장 카운터를 가지고 있음
+내장 카운터는 맵, 리듀스, 콤바이너의 입출력 레코드 건수와 바이트를 확인하며, 몇개의
+맵 태스크와 리듀스 태스크가 실행되고 실패했는지, 파일 시스템에서는 얼마나 많은 바이트를 읽고
+썼는지에 대한 정보를 제공
+이러한 내장 카운터의 값은 잡을 실행하면 콘솔 화면에 출력되는 로그에 나타남
+
+
+
+병렬처리기법
+
+두가지를 한번에 처리하는 방법은?
+
+MultipleOutputs
+a. org.apache.hadoop.mapreduce.lib.output.MultipleOutputs 은 여러개의 출력 데이터를 쉽게
+생성할 수 있는 기능을 제공
+
+b. MultipleOutputs 는 여러 개의 OutputCollectors 를 만들고 각 OutputCollectiors 에 대한 출력 경로,
+출력 포맷, 키와 값 유형을 설정
+
+c. 이러한 패러미터 설정은 MultipleOutputs 에서 제공하는 static 메서드 addNamedOutput을 호출해 설정
+e. 맵리듀스 잡이 종료되면 리듀스 단계에서 part-r-xxxxx 라는 출력 데이터를 생성함
+그런데 리듀스 단계에서 MultipleOutputs 를 이용해 myfile 이라는 디렉터리에 데이터를
+생성할 경우 part-r-xxxxx 와 myfile-r-xxxxx 가 동시에 생성
+
+
+
+
