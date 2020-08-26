@@ -1,0 +1,205 @@
+Hive란
+자바 코딩을 못하는 사람을 위해 sql 문을 이용해서 hdfs 맵 리듀스 작업을 할 수 있게 해주는 것
+
+
+Hive 환경설정해주기 이어서 진행
+
+이름 바꿔주기
+
+mv conf/hive-default.xml conf/hive-site.xml
+
+
+
+https://dev.mysql.com/downloads/connector/j/
+
+platform independent
+
+TAR Archive 받기
+
+JDBC 을 위해 세팅하기
+
+윈도우에서 vboxshare Download 에 풀기
+
+cp /mnt/share/download/mysql-connector-java-8.0.21.jar lib/
+
+하이브가 기동하면서 중간 중간 생기는 임시파일을 저장하는 디렉토리를 만들어줘야함
+
+하둡에서 새로 만들어줘야 할 폴더가 있음
+
+[jun@hadoopnode01 ~/hadoop]$ bin/hdfs dfs -mkdir /tmp
+[jun@hadoopnode01 ~/hadoop]$ bin/hdfs dfs chmod 775 /tmp
+[jun@hadoopnode01 ~/hadoop]$ bin/hdfs dfs -mkdir /tmp/jun      <- jun 은 내가 하이브 접속시 권한을 줄 아이디임
+[jun@hadoopnode01 ~/hadoop]$ bin/hdfs dfs -chmod 777 /tmp/jun  <- 권한 변화
+
+
+
+메타스코어 초기화는 한번만 해두면 된다.
+
+하는 방법은 
+[jun@hadoopnode01 ~/apache-hive-2.3.7-bin]$ bin/schematool -initSchema -dbType mysql
+
+로직상 꼭 해야하는 것
+
+혹시 failed 가 뜬다면
+sudo vi /etc/my.cnf   <- 여기 들어가서 한국시간대로 맞춰줘야 제대로 돌아감
+
+맨 위에 
+default-time-zone='+9:00' 넣어줄 것
+
+멈췄다가 다시 시작해줄 것
+systemctl stop mysqld
+systemctl start mysqld
+
+
+
+[jun@hadoopnode01 ~/apache-hive-2.3.7-bin]$ ps -ef | grep mysqld
+mysql    30408     1 12 11:08 ?        00:00:01 /usr/sbin/mysqld	<- stop때는 없어져야 하고 start때는 생겨야 함
+jun      30458 23227  0 11:09 pts/0    00:00:00 grep --color=auto mysqld
+
+
+bin/schematool -initSchema -dbType mysql
+
+시작해주기
+
+
+bin/hive 로 hive 에 진입할 수 있는데
+혹시 에러가 뜬다면
+
+vi conf/hive-site.xml 들어가서
+오류를 잡아줘야 한다 
+
+</description>
+   </property>
+<property>
+    <name>system:java.io.tmpdir</name>
+    <value>/tmp/jun</value>			<- jun 은 해당 사용자 아이디
+</property>
+<property>
+    <name>system:user.name</name>
+    <value>${user.name}</value>
+</property>
+</configuration>
+
+
+
+하이브는 HiveQL 이라는 SQL문과 매우 유사한 언어를 제공
+대부분의 기능은 SQL 과 유사하지만 다음과 같은 차이점이 있음
+a. 하이브에서 사용하는 데이터가 HDFS에 저장되는데, HDFS가 한번 저장한 파일은
+수정할 수 없기 때문에 UPDATE 와 DELETE 를 사용할 수 없다.
+b. 같은 이유로 INSERT도 비어 있는 테이블에 입력하거나, 이미 입력된 데이터를
+overwrite 하는 경우만 가능하다. 그래서 하이브는 INSERT OVERWRITE 라는 키워드를 사용한다.
+c. SQL은 어떠한 절에서도 서브쿼리를 사용할 수 있지만 HiveQL 은 FROM 절에서만 
+서브 쿼리를 사용할 수 있다.
+d. SQL 의 뷰는 업데이트 할 수 있고, 구체화된 뷰 또는 인라인 뷰를 지원한다.
+하지만 HiveQL 의 뷰는 읽기 전용이며 인라인 뷰는 지원하지 않는다.
+e. SELECT 문을 사용할 때 HAVING 절을 사용할 수 없다.
+f. 저장 프로시저를 지원하지 않는다. 대신 맵리듀스 스크립트를 실행할 수 있다.
+
+
+
+
+테이블 만들어주기
+(헤더쪽만 따로 빼내서 만들어준다)
+
+create table airline_delay(YEAR INT, MONTH INT, DAY_OF_MONTH INT, DAY_OF_WEEK INT, 
+FL_DATE STRING, UNIQUE_CARRIER STRING, TAIL_NUM STRING, FL_NUM INT, 
+ORIGIN_AIRPORT_ID INT, ORIGIN STRING, ORIGIN_STATE_ABR STRING, DEST_AIRPORT_ID INT, 
+DEST STRING, DEST_STATE_ABR STRING, CRS_DEP_TIME INT, DEP_TIME INT, 
+DEP_DELAY INT, DEP_DELAY_NEW INT, DEP_DEL15 INT, DEP_DELAY_GROUP INT, 
+TAXI_OUT INT, WHEELS_OFF STRING, WHEELS_ON STRING, TAXI_IN INT, CRS_ARR_TIME INT, 
+ARR_TIME INT, ARR_DELAY INT, ARR_DELAY_NEW INT, ARR_DEL15 INT, 
+ARR_DELAY_GROUP INT, CANCELLED INT, CANCELLATION_CODE STRING, DIVERTED INT, 
+CRS_ELAPSED_TIME INT, ACTUAL_ELAPSED_TIME INT, AIR_TIME INT, FLIGHTS INT, 
+DISTANCE INT, DISTANCE_GROUP INT, CARRIER_DELAY STRING, WEATHER_DELAY STRING, 
+NAS_DELAY STRING, SECURITY_DELAY STRING, LATE_AIRCRAFT_DELAY STRING)
+   PARTITIONED BY (delayYear INT)
+   ROW FORMAT DELIMITED
+   FIELDS TERMINATED BY ','
+   LINES TERMINATED BY '\n'
+   STORED AS TEXTFILE;
+
+delayYear 로 파티션으로 나눠준다. 
+
+
+
+show tables;
+
+테이블 만들어진거 확인하고
+
+
+비행파일 새롭게 헤드 없애서 자료 준비한다 download 안에 12개 넣을 것
+
+[jun@hadoopnode01 ~/hadoop]$ bin/hdfs dfs -ls /tmp/hive
+[jun@hadoopnode01 ~/hadoop]$ bin/hdfs dfs -mkdir hive-data
+[jun@hadoopnode01 ~/hadoop]$ bin/hdfs dfs -put /mnt/share/download/*.csv hive-data
+
+
+hive-data 폴더를 만들어서 그 안에 csv 만들어둔 12개 파일을 넣어준다.
+
+hive> load data inpath '/user/jun/hive-data/*2002*csv' overwrite into table airline_delay
+	 > partition (delayYear='2002');
+
+hive> load data inpath '/user/jun/hive-data/*2003*csv' overwrite into table airline_delay
+	 > partition (delayYear='2003');
+
+
+sql 문을 이용해서 map reducer 를 뽑아낼 수 있다. 
+
+hive> select YEAR,MONTH,DAY_OF_MONTH,DAY_OF_WEEK,FL_DATE,UNIQUE_CARRIER,
+TAIL_NUM,FL_NUM,ORIGIN_AIRPORT_ID,ORIGIN,ORIGIN_STATE_ABR,DEST_AIRPORT_ID,
+DEST,DEST_STATE_ABR,CRS_DEP_TIME,DEP_TIME,DEP_DELAY,DEP_DELAY_NEW,DEP_DEL15,
+DEP_DELAY_GROUP
+    > from airline_delay
+    > where delayYear = '2002'
+    > limit 20;
+
+
+hive> select count(*) from airline_delay;
+
+hive> select count(*) from airlin_delay where delayYear = '2002';
+
+hive> select count(*) from airline_delay where delayYear = '2003';
+
+
+hive> select year, month, count(*) AS arrive_delay_count
+    > from airline_delay
+    > where ARR_DELAY > 0
+    > group by year, month;
+
+hive> select year, month, AVG(arr_delay) as avg_arrival_delay, AVG(dep_delay) as avg_departure_delay
+    > from airline_delay
+    > where arr_delay > 0
+    > group by year, month;
+
+(평균 구하기)
+
+
+hive> CREATE TABLE carrier_code(Code STRING, Description STRING)
+    > ROW FORMAT DELIMITED
+    > FIELDS TERMINATED BY ','
+    > LINES TERMINATED BY '\n'
+    > STORED AS TEXTFILE;
+OK
+Time taken: 0.698 seconds
+
+carriers.csv 파일 헤더 지워서 다운로드 폴더에 넣어놓기
+
+hive> load data local inpath '/mnt/share/download/carriers.csv' into table carrier_code;
+Loading data to table default.carrier_code
+OK
+
+
+hive> select * from carrier_code limit 20;
+
+
+연도별 항공사별로 누가 더 지연이 많았는가
+
+
+hive> select a.year, a.UNIQUE_CARRIER, b.Description, count(*)
+    > from airline_delay a join carrier_code b
+    > on a.UNIQUE_CARRIER = b.code
+    > where a.arr_delay > 0
+    > group by a.year, a.UNIQUE_CARRIER, b.Description;
+
+
+
