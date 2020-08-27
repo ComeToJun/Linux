@@ -1,0 +1,471 @@
+Sqoop 스쿱
+
+우리는 hive 가 설치되어있기 때문에 스쿱을 이용해서 주고받기 해보자
+
+
+apache sqoop 에서 최신버전을 받으면 된다. 현재 1.4.7.
+
+링크주소 복사해서 wget 으로 다운로드 하자
+
+만들어진 테이블들을 하둡이나 하이브로 보내줄 수 있게 하는 것.
+
+다운받은거 풀어주고
+ln -n 으로 심볼릭 만들어주는건 마음대로
+
+[jun@hadoopnode01 ~/sqoop]$ mv conf/sqoop-env-template.sh conf/sqoop-env.sh
+
+이름 바꿔줄것.
+
+
+
+[jun@hadoopnode01 ~/sqoop]$ vi conf/sqoop-env.sh
+
+23번째 줄
+export HADOOP_COMMON_HOME=$HADOOP_HOME
+26번째 줄
+export HADOOP_MAPRED_HOME=$HADOOP_HOME
+
+Mysql connect 가 필요하지만 Hive 하면서 넣어줬음
+
+
+[jun@hadoopnode01 ~/sqoop]$ ls -l ../apache-hive-2.3.7-bin/lib/mysql*
+-rwxrwx---. 1 jun jun 2397321  8월 26 10:19 ../apache-hive-2.3.7-bin/lib/mysql-connector-java-8.0.21.jar
+
+이놈을 하나 복사해주면 됨
+
+[jun@hadoopnode01 ~/sqoop]$ cp ../apache-hive-2.3.7-bin/lib/mysql-connector-java-8.0.21.jar lib/
+
+복사해줌
+
+bin 디렉토리에 있는 실행파일 찾아서 진행하기 ( sqoop 이라는 단어로만 되어있는 파일 )
+
+
+
+
+
+[jun@hadoopnode01 ~/sqoop]$ bin/sqoop   < - 명령어
+
+Warning: /home/jun/sqoop-1.4.7.bin__hadoop-2.6.0/bin/../../hbase does not exist! HBase imports will fail.
+Please set $HBASE_HOME to the root of your HBase installation.
+Warning: /home/jun/sqoop-1.4.7.bin__hadoop-2.6.0/bin/../../hcatalog does not exist! HCatalog jobs will fail.
+Please set $HCAT_HOME to the root of your HCatalog installation.
+Warning: /home/jun/sqoop-1.4.7.bin__hadoop-2.6.0/bin/../../accumulo does not exist! Accumulo imports will fail.
+Please set $ACCUMULO_HOME to the root of your Accumulo installation.
+Warning: /home/jun/sqoop-1.4.7.bin__hadoop-2.6.0/bin/../../zookeeper does not exist! Accumulo imports will fail.
+Please set $ZOOKEEPER_HOME to the root of your Zookeeper installation.
+Try 'sqoop help' for usage.
+
+다른 에러는 없고, 체크만 해서 없다고 알려주는거라 이렇게 나오면 실행된거
+
+
+
+실습 가능한 파일을 받아보자
+
+http://www.tpc.org/tpch/
+
+그 전에,
+
+하둡폴더에 가서 mysql 접속하기
+
+[jun@hadoopnode01 ~/hadoop]$ mysql -u root -p
+mysql> create database tpch_db;			   <-tpach를 위한 새로운 db 만들기
+mysql> grant all privileges on tpch_db.* to hiveuser@'%';    <- 전에 만들어 두었던 hiveuser 에 권한 주기
+mysql> flush privileges;				     <- 준 권한 적용하기
+
+
+다시 사이트로 돌아가서 다운로드 가기
+TPC-H	2.18.0	pdf	Download TPC-H_Tools_v2.18.0.zip
+
+다운 받아서 알집 다운로드에 넣어두고 
+
+[jun@hadoopnode01 ~/tpc-data]$ cp /mnt/share/download/practice.zip .
+
+현재 폴더로 복사해서 가져오기
+가져온 zip 은 unzip 이름으로 압축풀기 가능
+
+2.18.0_rc2 파일을 보기 편하게 심볼릭으로 바꿔주기 
+** 여기에서는 tpc-h 로 심볼릭 해줬음
+
+[jun@hadoopnode01 ~/tpc-data]$ ls -l tpc-h/
+합계 2808
+-rw-rw-r--.  1 jun jun   17809 12월  5  2018 EULA.txt
+drwxrwxr-x.  8 jun jun    4096 12월  5  2018 dbgen
+drwxrwxr-x.  2 jun jun      34 12월  5  2018 dev-tools
+drwxrwxr-x. 10 jun jun     101 12월  5  2018 ref_data
+-rw-rw-r--.  1 jun jun  323316 12월  5  2018 specification.docx
+-rw-rw-r--.  1 jun jun 2525327 12월  5  2018 specification.pdf
+
+dbgen 은 dbgenerater 로 db를 만들어주는애라고 생각하면 됨
+
+이 폴더 안에서
+[jun@hadoopnode01 ~/tpc-data/tpc-h/dbgen]$ ls -l makefi*
+-rw-rw-r--. 1 jun jun 6360 12월  5  2018 makefile.suite
+이 파일 이름을 바꿔준다.
+
+
+[jun@hadoopnode01 ~/tpc-data/tpc-h/dbgen]$ cp makefile.suite makefile
+
+
+[jun@hadoopnode01 ~/tpc-data/tpc-h/dbgen]$ ls -l makefi*
+-rw-rw-r--. 1 jun jun 6360  8월 27 10:46 makefile
+-rw-rw-r--. 1 jun jun 6360 12월  5  2018 makefile.suite
+
+
+
+
+[jun@hadoopnode01 ~/tpc-data/tpc-h/dbgen]$ vi makefile
+
+줄 103
+CC      = gcc
+
+줄 109
+DATABASE= MYSQL
+MACHINE = LINUX
+WORKLOAD = TPCH
+
+MYSQL 에 넣을 데이터를 생성해줄 makefile 임
+
+원 파일을 자체포맷으로 변형시켜놓은것들을 sqoop 에서 이해할 수 있게 만들어주는거라고 생각하면 됨
+
+[jun@hadoopnode01 ~/tpc-data/tpc-h/dbgen]$ make dbgen
+
+이 안에 실행할 수 있는 dbgen 파일이 생긴다.
+이걸로 실제 데이터를 만들어야함
+
+[jun@hadoopnode01 ~/tpc-data/tpc-h/dbgen]$ ./dbgen -s 1      <- 1기가 정도의 데이터를 만들겠다는 명령어
+TPC-H Population Generator (Version 2.18.0)
+Copyright Transaction Processing Performance Council 1994 - 2010
+
+
+[jun@hadoopnode01 ~/tpc-data/tpc-h/dbgen]$ mysql -u hiveuser -p tpch_db < dss.ddl
+					hiveuser, tpch_db 는 만들어둔거 
+					dss.ddl 은 ./dbgen -s 1 로 만들어진 것
+
+
+[jun@hadoopnode01 ~/tpc-data/tpc-h/dbgen]$ mysql -u hiveuser -p    <- mysql 로 접속
+
+mysql> use tpch_db;					        <- 만들어둔거 적용
+Reading table information for completion of table and column names
+You can turn off this feature to get a quicker startup with -A
+
+Database changed
+
+
+
+mysql> show tables;					<- table 보여주기
++-------------------+
+| Tables_in_tpch_db |
++-------------------+
+| CUSTOMER          |
+| LINEITEM          |
+| NATION            |
+| ORDERS            |
+| PART              |
+| PARTSUPP          |
+| REGION            |
+| SUPPLIER          |
++-------------------+
+8 rows in set (0.00 sec)
+
+
+
+
+
+[jun@hadoopnode01 ~/tpc-data/tpc-h/dbgen]$ ls -l *tbl
+
+-rw-rw-r--. 1 jun jun  24346144  8월 27 11:08 customer.tbl
+-rw-rw-r--. 1 jun jun 759863287  8월 27 11:08 lineitem.tbl
+-rw-rw-r--. 1 jun jun      2224  8월 27 11:08 nation.tbl
+-rw-rw-r--. 1 jun jun 171952161  8월 27 11:08 orders.tbl
+-rw-rw-r--. 1 jun jun  24135125  8월 27 11:08 part.tbl
+-rw-rw-r--. 1 jun jun 118984616  8월 27 11:08 partsupp.tbl
+-rw-rw-r--. 1 jun jun       389  8월 27 11:08 region.tbl
+-rw-rw-r--. 1 jun jun   1409184  8월 27 11:08 supplier.tbl
+
+tbl 파일들이 show tables 에 나오는걸 확인할 수 있다.
+
+[jun@hadoopnode01 ~/tpc-data/tpc-h/dbgen]$ ./dbgen -s 1   위에 결과는 이 명령어로 만들어졌다.
+
+
+
+mysql> load data local infile '/home/jun/tpc-data/tpc-h/dbgen/CUSTOMER.tbl' into table CUSTOMER fields terminated by '|';
+ERROR 3948 (42000): Loading local data is disabled; this must be enabled on both the client and server sides
+
+최초 기본 설정은 이러한 작업을 하지 못하게 되어있기 때문에 풀어주고 다시 진행해야 한다.
+
+중요함
+
+mysql> system mysql -u root -p
+
+mysql 에서 시스템을 루트로 다시 바꿔줌
+
+Enter password:
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 13
+Server version: 8.0.21 MySQL Community Server - GPL
+
+Copyright (c) 2000, 2020, Oracle and/or its affiliates. All rights reserved.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+
+mysql> SET GLOBAL local_infile=1;
+mysql daemon 내리기 전까지 유효
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> quit
+Bye
+mysql> quit
+Bye
+
+
+이렇게 나오면 처음은 root 에서 나와 hiveuser 로 다시 접속하는 것 과 같은 상황이라고 생각하면 됨
+한번 더 해서 완전히 나간다.
+
+
+[jun@hadoopnode01 ~/tpc-data/tpc-h/dbgen]$ mysql --local-infile=1 -u hiveuser -p
+
+다시 접속
+
+mysql> use tpch_db;
+
+이렇게 하면 루트로 굳이 다시 들어가지 않아도 사용할 수 있다는것을 보여주기 위한 것.
+
+
+
+
+mysql> load data local infile '/home/jun/tpc-data/tpc-h/dbgen/customer.tbl' into tabl
+e CUSTOMER fields terminated by '|';
+Query OK, 150000 rows affected (3.40 sec)
+Records: 150000  Deleted: 0  Skipped: 0  Warnings: 0
+
+mysql> load data local infile '/home/jun/tpc-data/tpc-h/dbgen/lineitem.tbl' into tabl
+e LINEITEM fields terminated by '|';
+Query OK, 6001215 rows affected (4 min 34.55 sec)
+Records: 6001215  Deleted: 0  Skipped: 0  Warnings: 0
+
+mysql> load data local infile '/home/jun/tpc-data/tpc-h/dbgen/nation.tbl' into table
+NATION fields terminated by '|';
+Query OK, 25 rows affected (0.02 sec)
+Records: 25  Deleted: 0  Skipped: 0  Warnings: 0
+
+mysql> load data local infile '/home/jun/tpc-data/tpc-h/dbgen/orders.tbl' into table
+ORDERS fields terminated by '|';
+Query OK, 1500000 rows affected (50.11 sec)
+Records: 1500000  Deleted: 0  Skipped: 0  Warnings: 0
+
+mysql> load data local infile '/home/jun/tpc-data/tpc-h/dbgen/part.tbl' into table PA
+RT fields terminated by '|';
+Query OK, 200000 rows affected (4.03 sec)
+Records: 200000  Deleted: 0  Skipped: 0  Warnings: 0
+
+mysql> load data local infile '/home/jun/tpc-data/tpc-h/dbgen/partsupp.tbl' into tabl
+e PARTSUPP fields terminated by '|';
+Query OK, 800000 rows affected (25.96 sec)
+Records: 800000  Deleted: 0  Skipped: 0  Warnings: 0
+
+mysql> load data local infile '/home/jun/tpc-data/tpc-h/dbgen/region.tbl' into table
+REGION fields terminated by '|';
+Query OK, 5 rows affected (0.01 sec)
+Records: 5  Deleted: 0  Skipped: 0  Warnings: 0
+
+mysql> load data local infile '/home/jun/tpc-data/tpc-h/dbgen/supplier.tbl' into tabl
+e SUPPLIER fields terminated by '|';
+Query OK, 10000 rows affected (0.34 sec)
+Records: 10000  Deleted: 0  Skipped: 0  Warnings: 0
+
+
+
+mysql> select * from NATION limit 10;
+
+
+만들어진 테이블 10개씩 배서 보기
+
+
+import 할 scripts 폴더를 만들어서 밑에 정보를 넣어준다.
+
+[jun@hadoopnode01 ~/sqoop]$ mkdir scripts
+[jun@hadoopnode01 ~/sqoop/scripts]$ vi supplier_import.sh
+
+--username
+hiveuser
+--password
+1234
+--connect
+jdbc:mysql://localhost:3306/tpch_db
+--table
+SUPPLIER
+--columns
+S_SUPPKEY,S_NAME,S_ADDRESS,S_NATIONKEY,S_PHONE,S_ACCTBAL,S_COMMENT
+
+
+** 항공기건을 생각하면
+밑에
+
+--where
+year='2010' 으로 2010년 정보만 따로 가져올수도 있다.
+
+
+저장하고 나와서
+
+
+
+
+[jun@hadoopnode01 ~/sqoop]$ bin/sqoop import --options-file scripts/supplier_import.sh 
+실행하면 실패하는데
+이유는, Import failed: No primary key could be found for table SUPPLIER. Please specify one with 
+--split-by or perform a sequential import with '-m 1'.
+
+프라이머리 키가 없어서 그렇다.
+
+[jun@hadoopnode01 ~/sqoop]$ vi scripts/supplier_import.sh
+
+다시 여기 들어가서
+
+--username
+hiveuser
+--password
+1234
+--connect
+jdbc:mysql://localhost:3306/tpch_db
+--table
+SUPPLIER
+--columns
+S_SUPPKEY,S_NAME,S_ADDRESS,S_NATIONKEY,S_PHONE,S_ACCTBAL,S_COMMENT
+--split-by
+S_SUPPKEY
+
+
+밑에 다시 고쳐주기 split-by  ** 프라이머리 키가 하나일때만 가능
+
+[jun@hadoopnode01 ~/sqoop]$ bin/sqoop import --options-file scripts/supplier_import.sh
+다시 넣어주면 돌아간다.
+
+
+
+[jun@hadoopnode01 ~/hadoop]$ bin/hdfs dfs -ls SUPPLIER
+
+rw-r--r--   1 jun supergroup          0 2020-08-27 13:24 SUPPLIER/_SUCCESS
+-rw-r--r--   1 jun supergroup     348279 2020-08-27 13:24 SUPPLIER/part-m-00000
+-rw-r--r--   1 jun supergroup     351581 2020-08-27 13:24 SUPPLIER/part-m-00001
+-rw-r--r--   1 jun supergroup     350223 2020-08-27 13:24 SUPPLIER/part-m-00002
+-rw-r--r--   1 jun supergroup     349101 2020-08-27 13:24 SUPPLIER/part-m-00003
+
+
+[jun@hadoopnode01 ~/hadoop]$ bin/hdfs dfs -tail SUPPLIER/part-m-00000
+
+같은 방식으로 안에 들어있는 파일들을 볼 수 있다.
+
+
+
+다른 것들도 가져와보자
+
+mysql> use tpch_db
+Database changed
+
+mysql> desc LINEITEM;
+
+검사해서 프라이머 키로 뽑을것 한번 보고, 데이터도 뽑아서 확인해보기
+
+
+mysql> select L_ORDERKEY,L_PARTKEY,L_SUPPKEY,L_LINENUMBER,L_QUANTITY,L_EXTENDEDPRICE,L_DISCOUNT,L_TAX,
+L_RETURNFLAG ,L_LINESTATUS from LINEITEM limit 10;
+
+첫번째와 두번째 컬럼을 프라이머키로 사용
+
+
+[jun@hadoopnode01 ~/sqoop]$ vi scripts/lineitem_import.sh
+다시 들어가서
+
+--username
+hiveuser
+--password
+1234
+--connect
+jdbc:mysql://localhost:3306/tpch_db
+--table
+LINEITEM
+--columns
+L_ORDERKEY , L_PARTKEY , L_SUPPKEY , L_LINENUMBER , L_QUANTITY , L_EXTENDEDPRICE , L_DISCOUNT , 
+L_TAX , L_RETURNFLAG , L_LINESTATUS , L_SHIPDATE , L_COMMITDATE , L_RECEIPTDATE , L_SHIPINSTRUCT, 
+L_SHIPMODE, L_COMMENT
+-m
+1
+
+
+** -m, 1 뜻 : 키 구분이 안되니 map reduce 테스트를 하나로만 해라
+
+위에 컬럼은 
+
+mysql> select * from LINEITEM limit 1;
+
+이걸로 컬럼 전부를 복사해서 다시 vi scripts/lineitem_import.sh 안에다 넣고
+:g/|/s//,/g 
+
+위에 식으로 | 을 전부 , 로 바꾼다.
+
+저장하고 나와서
+
+[jun@hadoopnode01 ~/sqoop]$ bin/sqoop import --options-file scripts/lineitem_import.sh
+
+
+데이터가 많아서 오래 걸린다.
+[jun@hadoopnode01 ~/hadoop]$ bin/hdfs dfs -tail LINEITEM/part-m-00000
+
+
+
+
+
+Export 해보자
+
+
+mysql> create table carrier_code(code TEXT, description TEXT);   
+
+그나마 컬럼이 좀 작은 carrier 테이블을 만들자
+Query OK, 0 rows affected (0.11 sec)
+
+mysql> create table carrier_code_staging like carrier_code;
+
+임시 코드를 만들어 적용
+Query OK, 0 rows affected (0.17 sec)
+
+[jun@hadoopnode01 ~/hadoop]$ bin/hdfs dfs -mkdir carrier_code
+[jun@hadoopnode01 ~/hadoobin/hdfs dfs -put /mnt/share/download/carriers.csv carrier_code
+
+원래 Download 폴더에 있던 파일을 carrier_code 에 넣는다.
+
+
+
+[jun@hadoopnode01 ~/sqoop]$ cp scripts/lineitem_import.sh scripts/carrier_export.sh
+[jun@hadoopnode01 ~/sqoop]$ vi scripts/carrier_export.sh
+
+같은거 복사해서 새롭게 만들자
+
+--username
+hiveuser
+--password
+1234
+--connect
+jdbc:mysql://localhost:3306/tpch_db
+--table
+carrier_code
+--staging-table
+carrier_code_staging
+--clear-stagin-table
+--input-fields-terminated-by		<- csv 컬럼이 전부 , 으로 나뉘어져 있기 때문
+,
+--export-dir
+/user/jun/carrier_code
+-m
+1
+
+[jun@hadoopnode01 ~/sqoop]$ bin/sqoop export --options-file scripts/carrier_export.sh
+
+[jun@hadoopnode01 ~/hadoop]$ bin/hdfs dfs -ls carrier_code
+[jun@hadoopnode01 ~/hadoop]$ bin/hdfs dfs -tail carrier_code/carriers.csv
+
+
