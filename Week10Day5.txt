@@ -1,0 +1,653 @@
+Tajo 타조
+
+고려대 대학원에서 데이터베이스 논문을 위해 시작한 프로젝트
+
+아파치 최상위 프로젝트로 승격
+
+
+ETL(extract Transform Load)
+특정 데이터 소스를 추출해서 가공 후 다시 적재하는 것. 하둡의 mapreduce 와 비슷한 개념
+
+Long time Query 도 지원해야 하지만, Ad-hoc Query도 지원해야 한다.
+
+Long 은 minutes ~ hours 동안 처리되는 질의
+TBs ~ PBs 의 데이터 처리 능력
+
+Ad 는 주기적으로 들어오는 쿼리 말고,
+그때그때 필요에 의해 들어오는 쿼리들.
+
+항상 필요한 쿼리들이 아닌, 그때 상황에 따라 갑자기 만든 쿼리들.
+
+
+Tajo는 Data Warehouse Infrastructue
+
+
+
+
+Tojo 새롭게 깔아보기
+
+리눅스가 2개 필요하기 때문에 현재 갖고 있는 리눅스를 4g 2개로 나누어 설정한다.
+
+VM virtualBox 관리자를 실행해서 CentOS 전원을 끄고 복제 클릭
+
+경로를 새롭게 설정하는데, 폴더를 따로 만들어둔다 같은 이름 뒤에 2 라고 해서 안에 있는 폴더는 똑같이 하는게 적당할듯
+image 와 vboxshare 폴더를 만들어두고 여기서는 image 폴더로 경로가 들어가게 할 것
+
+
+MAC 주소 정책은 모든 네트워크 어댑터의 새 MAC 주소 설정 후 다음으로 만들기
+
+
+설정에서 시스템 기본 메모리 4096 으로 낮춰주고 
+네트워크 어댑터 1 
+네트워크 어댑터 사용하기 체크
+다음에 연결됨 어댑터에 브리지
+이름 Realtek ~ 로 설정 후 확인
+
+두번째로 만든 CentOS7-2 설정
+시스템에서 기본 메모리 4096 으로 낮추고
+네트워크에서 어댑터 체크 풀어서 아예 안쓰게 만든 뒤
+어댑터 2에서 네트워크 어댑터 사용하기 체크
+다음에 연결됨 어댑터에 브리지
+이름 Realtek ~ 로 설정
+
+공유폴더에서 미리 만들어 두었던 폴더로 경로 새롭게 지정// 여기서는 OracleVbox_jun2 폴더로 지정했음
+
+
+
+
+메모리를 4기가로 만든 원래 centos 에 접속한다.
+터미널 열서 ifconfig 열면 본인 아이피를 알 수 있다.
+
+[jun@localhost ~]$ ifconfig
+enp0s3: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 192.168.1.50  netmask 255.255.255.0  broadcast 192.168.1.255    <<<<<<-------
+        inet6 fe80::d44d:5114:23f9:b446  prefixlen 64  scopeid 0x20<link>
+        ether 08:00:27:eb:26:76  txqueuelen 1000  (Ethernet)
+        RX packets 695  bytes 91283 (89.1 KiB)
+        RX errors 0  dropped 30  overruns 0  frame 0
+        TX packets 153  bytes 16367 (15.9 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+        inet 127.0.0.1  netmask 255.0.0.0
+        inet6 ::1  prefixlen 128  scopeid 0x10<host>
+        loop  txqueuelen 1000  (Local Loopback)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 0  bytes 0 (0.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+virbr0: flags=4099<UP,BROADCAST,MULTICAST>  mtu 1500
+        inet 192.168.122.1  netmask 255.255.255.0  broadcast 192.168.122.255
+        ether 52:54:00:7e:7a:a0  txqueuelen 1000  (Ethernet)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 0  bytes 0 (0.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+
+윈도우에서 커맨드 창으로 접속해서 여기에 나온 아이피를 ping 과 함께 입력하면
+
+C:\Users\user>ping 192.168.1.50
+
+Ping 192.168.1.50 32바이트 데이터 사용:
+192.168.1.50의 응답: 바이트=32 시간<1ms TTL=64
+192.168.1.50의 응답: 바이트=32 시간<1ms TTL=64
+192.168.1.50의 응답: 바이트=32 시간<1ms TTL=64
+192.168.1.50의 응답: 바이트=32 시간<1ms TTL=64
+
+192.168.1.50에 대한 Ping 통계:
+    패킷: 보냄 = 4, 받음 = 4, 손실 = 0 (0% 손실),
+왕복 시간(밀리초):
+    최소 = 0ms, 최대 = 0ms, 평균 = 0ms
+
+이런식으로 받을 수 있다고 알려준다.
+
+
+
+
+
+
+putty 에서 원래 centos 를 클릭하고 로드 한번 누르고
+위에 Host Name 에 
+192.168.1.50 (내 컴퓨터 ifconfig 에서 볼 수 있는 주소) 
+
+port 에 기본 포트인 22 다시 넣고
+
+이름을 centos-1 바꾸고 세이브 누르면 새롭게 4기가 짜리로 만들어짐
+
+
+
+Open 해서 들어가서 Yes 하면 새롭게 putty 창이 뜬다.
+
+
+
+새로운 Putty 창에서 하둡을 하기 위해서는 새롭게 설정을 바꿔야 한다.
+[jun@localhost ~]$ sudo vi /etc/hosts
+
+127.0.0.1       localhost.localdomain localhost4 localhost4.localdomain4
+::1             localhost localhost.localdomain localhost6 localhost6.localdomain6
+192.168.1.50    hadoopnode01     <<<--- 바꾸고 저장
+#10.0.2.15      hadoopnode01
+#10.0.2.15      hadoopnode02
+#10.0.2.15      hadoopnode03
+#10.0.2.15      hadoopnode04
+
+하둡 실행
+
+sbin/start-dfs.sh
+sbin/start-yarn.sh
+sbin/yarn-damon.sh start proxyserver
+sbin/mr-jobhistory-daemon.sh start historyserver
+
+
+
+[jun@localhost ~/hadoop]$ bin/hdfs dfs -ls
+파일 학인하기
+
+
+[jun@localhost ~/hadoop]$ bin/hdfs dfs -ls word-input
+-rw-r--r--   1 jun supergroup       4228 2020-08-19 15:03 word-input/hadoop-env.sh
+
+[jun@localhost ~/hadoop]$ bin/yarn jar share/hadoop/mapreduce/hadoop-mapreduce-examples-2.7.2.jar wordcount word-input test-output
+
+결과 나오는거까지만 확인하면 된다.
+ 
+
+
+
+확인 후 VM virtual 에서 두번째 머신 키자
+
+centos 에서 ifconfig 해서 다시 ip주소 확인하고
+
+sudo vi /etc/hosts 들어가서 ip 주소 바꿔주고 workernode 로 이름 해주고 나오자
+
+
+tajo 에서 쓸거임
+
+putty 에서 ip 주소 여기껄로 해서 로드 세이브 다시해서 open 한다.
+
+
+[jun@localhost ~]$ cat .ssh/id_rsa.pub >> .ssh/authorized_keys
+
+키 권한 주고
+
+각 터미널에 각 아이피랑 주소 줄 것
+
+127.0.0.1       localhost.localdomain localhost4 localhost4.localdomain4
+::1             localhost localhost.localdomain localhost6 localhost6.localdomain6
+192.168.1.50    hadoopnode01
+192.168.1.70    workernode
+#10.0.2.15      hadoopnode01
+#10.0.2.15      hadoopnode02
+#10.0.2.15      hadoopnode03
+#10.0.2.15      hadoopnode04
+
+두개 다 이런식으로 주자
+
+전부 reboot 해서 CentOS 까지 다시 접속하면 로그인 했을때 hadoopnode01 과 workernode 로 나뉜다.
+
+두번째 터미널인 workernode 에서 ssh hadoopnode01 입력하면
+hadoopnode01 로 들어갈 수 있다.
+
+exit 하면 다시 workernode 로 돌아올 수 있음
+
+
+
+https://tajo.apache.org/downloads.html
+
+타조 Binary Tarball 들어가서 미러로 링크 복사
+
+첫번째 hadoopnode01 에서  wget 으로 받기
+
+wget http://mirror.navercorp.com/apache/tajo/tajo-0.11.3/tajo-0.11.3.tar.gz
+받기
+tar zxvf tajo-0.11.3.tar.gz
+풀기
+ln -n tajo-0.11.3.tar.gz tajo
+심볼릭 만들기
+
+
+[jun@hadoopnode01 ~]$ vi .bashrc
+
+export TAJO_HOME=/home/jun/tajo-0.11.3
+
+[jun@hadoopnode01 ~]$ . .bashrc
+
+
+타조 환경변수로 경로 잡아주기
+
+. .bashrc 먹이기
+
+
+[jun@hadoopnode01 ~/tajo]$ vi conf/tajo-env.sh
+
+줄 25
+# Hadoop home. Required
+export HADOOP_HOME=$HADOOP_HOME
+
+줄 28
+# The java implementation to use.  Required.
+export JAVA_HOME=$JAVA_HOME
+
+줄30
+# Extra Java CLASSPATH elements.  Optional.
+export TAJO_CLASSPATH=$TAJO_HOME:$TAJO_HOME/lib
+
+줄 61
+# Where log files are stored.  $TAJO_HOME/logs by default.
+export TAJO_LOG_DIR=${TAJO_HOME}/logs
+
+줄 64
+# The directory where pid files are stored. /tmp by default.
+export TAJO_PID_DIR=$TAJO_HOME/pids
+
+
+
+[jun@hadoopnode01 ~/tajo]$ mkdir logs
+[jun@hadoopnode01 ~/tajo]$ mkdir pids
+
+logs 랑 pids 를 위한 폴더 만들어주기
+
+
+[jun@hadoopnode01 ~/tajo]$ cp conf/tajo-site.xml.template conf/tajo-site.xml
+
+
+[jun@hadoopnode01 ~/tajo]$ vi conf/tajo-site.xml
+
+줄 27
+ <property>
+  <name>tajo.rootdir</name>
+  <value>hdfs://hadoopnode01:9000/tajo</value>
+  <description>Base directory including system directories.</description>
+</property>
+
+<property>
+  <name>tajo.master.umbilical-rpc.address</name>
+  <value>hadoopnode01:26001</value>
+  <description>TajoMaster binding address between master and workers.</description>
+</property>
+
+<property>
+  <name>tajo.master.client-rpc.address</name>
+  <value>hadoopnode01:26002</value>
+  <description>TajoMaster binding address between master and clients.</description>
+</property>
+
+<property>
+  <name>tajo.resource-tracker.rpc.address</name>
+  <value>hadoopnode01:26003</value>
+  <description>TajoMaster binding address between master and workers.</description>
+</property>
+
+<property>
+  <name>tajo.catalog.client-rpc.address</name>
+  <value>hadoopnode01:26005</value>
+  <description>CatalogServer binding address between catalog server and workers.</description>
+</property>
+
+줄 79
+
+<property>
+  <name>tajo.worker.tmpdir.locations</name>
+  <value>/home/jun/tajo-0.11.3/tmp</value>
+  <description>A base for other temporary directories.</description>
+</property>
+<property>
+  <name>tajo.worker.resource.dfs-dir-aware</name>
+  <value>true</value>
+</property>
+
+저장하고 나오기
+
+[jun@hadoopnode01 ~/tajo]$ mkdir tmp
+[jun@hadoopnode01 ~/tajo]$ mysql -u root -p
+
+2개 바꿔주기
+
+mysql> create database tajo_db default character set UTF8;
+
+
+
+
+새롭게 tajo 유저 를 만들어서 tajo_db 에 대한 권한을 전부 주고 비밀번호 쉽게 설정 바꾸기
+
+mysql> create database tajo_db default character set UTF8;
+Query OK, 1 row affected, 1 warning (0.01 sec)
+
+mysql> set GLOBAL validate_password.length=4;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> set GLOBAL validate_password.mixed_case_count=0;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> set GLOBAL validate_password.policy=LOW;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> set GLOBAL validate_password.special_char_count=0;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> create user 'tajo'@'%' identified by '1234';
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> grant all privileges on tajo_db.* to tajo@'%';
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> flush privileges;
+Query OK, 0 rows affected (0.01 sec)
+
+전부 되면
+
+quit 으로 나오기
+
+
+
+
+
+[jun@hadoopnode01 ~/tajo]$ cp conf/catalog-site.xml.template catalog-site.xml
+
+[jun@hadoopnode01 ~/tajo]$ vi catalog-site.xml
+
+
+줄 28
+<!-- JDBC Common Settings -->
+
+<!-- Please remove comments if you want JDBC-based catalog store. -->
+<property>
+  <name>tajo.catalog.connection.id</name>
+  <value>tajo</value>
+</property>
+<property>
+  <name>tajo.catalog.connection.password</name>
+  <value>1234</value>
+</property>
+
+
+<!-- JDBC Store Section -->
+
+<!-- Please remove comments corresponding to your desired catalog store. -->
+<!-- You must choose only one catalog store driver among them. -->
+
+ <!-- MySQL Catalog Store Driver -->
+ <property>
+  <name>tajo.catalog.store.class</name>
+  <value>org.apache.tajo.catalog.store.MySQLStore</value>
+ </property>
+ <property>
+  <name>tajo.catalog.jdbc.uri</name>
+  <value>jdbc:mysql://hadoopnode01:3306/tajo_db?rewriteBatchedStatements=true</value>
+ </property>
+
+
+
+[jun@hadoopnode01 ~/tajo]$ vi conf/workers
+workernode 로 바꾸기
+
+
+[jun@hadoopnode01 ~/tajo]$ cp ../apache-hive-2.3.7-bin/lib/mysql-connector-java-8.0.21.jar lib/
+
+[jun@hadoopnode01 ~/tajo]$ cat ~/.bashrc  <--- 입력시 밑에가 보이는데
+
+
+# .bashrc
+
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+        . /etc/bashrc
+fi
+
+# Uncomment the following line if you don't like systemctl's auto-paging feature:
+# export SYSTEMD_PAGER=
+
+# User specific aliases and functions
+PS1="[\u@\h \w]\\$ "
+alias rm="rm -i"
+
+set -o vi
+
+export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.262.b10-0.el7_8.x86_64
+export CLASS_PATH=.:$JAVA_HOME/lib/tools.jar
+export HADOOP_HOME=/home/jun/hadoop-2.7.2
+export HADOOP_COMMON_LIB_NATIVE_DIR=$HADOOP_HOME/lib/native
+export PATH=$PATH:JAVA_HOME/bin:$HADOOP_COMMON_LIB_NATIVE_DIR
+export HIVE_HOME=/home/jun/apache-hive-2.3.7-bin
+export TAJO_HOME=/home/jun/tajo-0.11.3
+
+
+
+
+
+
+
+
+2번째 wokernode 터미널에서 
+
+vi .bashrc 로 들어가서 나오는 export 에 
+
+
+export TAJO_HOME=/home/jun/tajo-0.11.3
+
+
+추가해주기
+
+[jun@workernode ~]$ . .bashrc
+
+먹이고
+
+
+이제 ssh 의 강력한 기능
+
+[jun@hadoopnode01 ~]$ scp -r /home/jun/tajo-0.11.3 workernode:/home/jun/
+
+-r 명령으로 그동안 해놓은걸 싸그리(안에 있는 파일 전부) workernode/home/jun 으로 복사해서 가져가기
+
+
+
+workernode 에서 확인하면 전부 카피된걸 확인할 수 있다.
+
+
+
+
+타조 기동해보기
+
+[jun@hadoopnode01 ~/tajo]$ bin/start-tajo.sh
+Starting single TajoMaster
+starting master, logging to /home/jun/tajo/bin/../logs/tajo-jun-master-hadoopnode01.out
+workernode: starting worker, logging to /home/jun/tajo/bin/../logs/tajo-jun-worker-workernode.out
+Tajo master web UI: http://hadoopnode01:26080
+Tajo Client Service: hadoopnode01:26002
+
+[jun@hadoopnode01 ~/tajo]$ jps
+3920 ResourceManager
+6530 Jps
+3749 SecondaryNameNode
+3542 DataNode
+4393 WebAppProxyServer
+3419 NameNode
+4043 NodeManager
+4462 JobHistoryServer
+
+
+tajomaster 가 떠야 하는데, 안뜨니 로그에서 확인해보자
+
+확인하고(문제는 상황에 따라 다를거다)
+
+이번 문제에서는
+
+[jun@hadoopnode01 ~/tajo]$ vi conf/tajo-env.sh
+
+
+줄 30
+# Extra Java CLASSPATH elements.  Optional.
+export HAOOP_CLASSPATH=$HADOOP_HOME/share/hadoop/common
+export TAJO_CLASSPATH=$TAJO_HOME:$TAJO_HOME/lib:$HADOOP_CLASSPATH
+
+
+이렇게 바꿔주자
+
+
+만약  log 를 봐서 
+
+Exception: Pathname  from hdfs://hadoopnode01:9000 is not a valid DFS filename.
+java.lang.IllegalArgumentException: Pathname  from hdfs://hadoopnode01:9000 is not a valid DFS filename.
+
+이런 문제가 나온다면,
+
+[jun@hadoopnode01 ~/tajo]$ vi conf/tajo-site.xml   여기서 
+
+ <property>
+  <name>tajo.rootdir</name>
+  <value>hdfs://hadoopnode01:9000/tajo</value>
+  <description>Base directory including system directories.</description>
+</property>
+
+
+이거 바꿔주기 두번째줄에 tajo 넣어줘야 함
+
+workernode 에 가서도 같은 방식으로 바꿔줄 것
+
+
+
+전부 잘 진행되면
+
+[jun@hadoopnode01 ~/tajo]$ bin/start-tajo.sh
+
+Starting single TajoMaster
+master running as process 7495. Stop it first.
+workernode: starting worker, logging to /home/jun/tajo/bin/../logs/tajo-jun-worker-workernode.out
+workernode: OpenJDK 64-Bit Server VM warning: If the number of processors is expected to increase from one, then you should configure the number of parallel GC threads appropriately using -XX:ParallelGCThreads=N
+Tajo master web UI: http://hadoopnode01:26080
+Tajo Client Service: hadoopnode01:26002
+
+
+[jun@hadoopnode01 ~/tajo]$ jps
+
+3920 ResourceManager
+3749 SecondaryNameNode
+3542 DataNode
+7495 TajoMaster  	<<<<--- 얘가 뜨고
+7959 Jps
+4393 WebAppProxyServer
+3419 NameNode
+4043 NodeManager
+4462 JobHistoryServer
+
+
+
+
+2번째 workernode 에서 
+
+[jun@workernode ~/tajo]$ jps
+5354 Jps
+5261 TajoWorker
+
+
+jps 검색시 자동으로 Tajoworker가 떠야함 (따로 bin/start-dfs.sh 안한 상태에서 올라와야함)
+
+
+
+
+
+[jun@hadoopnode01 ~/tajo]$ ../hadoop/bin/hdfs dfs -ls /
+
+drwxr-xr-x   - jun supergroup          0 2020-08-28 16:06 /path
+drwxrwxr-x   - jun supergroup          0 2020-08-28 16:06 /tmp
+drwxr-xr-x   - jun supergroup          0 2020-08-26 13:34 /user
+
+
+
+
+workernode 에서
+
+[jun@hadoopnode01 ~/tajo]$ mkdir work
+[jun@hadoopnode01 ~/tajo/work]$ vi data.csv
+
+만들어서 입력 후 저장
+
+1|abc|1.1|a
+2|def|2.3|b
+3|ghi|3.4|c
+4|jkl|4.5|d
+5|mno|5.6|e
+
+[jun@hadoopnode01 ~/tajo]$ bin/tsql		<<-- tazo에서 제공하는 tsql 을 시범해봄. 
+					      이제 이걸로 진행해서 진짜 하나씩 해보자
+welcome to
+   _____ ___  _____ ___
+  /_  _/ _  |/_  _/   /
+   / // /_| |_/ // / /
+  /_//_/ /_/___/ \__/  0.11.3
+
+Try \? for help.
+
+default>     <<<<--- default 로 뜸
+
+성공
+
+
+default> \dfs -ls /
+Found 3 items
+drwxr-xr-x   - jun supergroup          0 2020-08-28 16:06 /path
+drwxrwxr-x   - jun supergroup          0 2020-08-28 16:06 /tmp
+drwxr-xr-x   - jun supergroup          0 2020-08-26 13:34 /user
+
+
+
+default> \dfs -mkdir /path/warehouse/table1
+default> \dfs -ls /path/warehouse
+
+drwxr-xr-x   - jun supergroup          0 2020-08-28 16:06 /path/warehouse/default
+drwxr-xr-x   - jun supergroup          0 2020-08-28 17:05 /path/warehouse/table1
+
+default> \dfs -put work/data.csv /path/warehouse/table1
+default> \dfs -ls /path/warehouse/table1
+Found 1 items
+-rw-r--r--   1 jun supergroup         60 2020-08-28 17:05 /path/warehouse/table1/data.csv
+
+default> create external table table1 (id int, name text, score float, type text) using TEXT 
+with ('text.delimiter'='|') location '/path/warehouse/table1';
+OK
+
+완료
+
+테이블을 만들어서 아까 만들어 놓았던 txt 를 데려오자
+
+
+
+default> \d table1;
+
+table name: default.table1
+table uri: hdfs://hadoopnode01:9000/path/warehouse/table1
+store type: TEXT
+number of rows: unknown
+volume: 60 B
+Options:
+        'timezone'='Asia/Seoul'
+        'text.null'='\\N'
+        'text.delimiter'='|'
+
+schema:
+id      INT4
+name    TEXT
+score   FLOAT4
+type    TEXT
+
+해당 데이터의 메타데이터를 가져온다.
+
+
+default> select * from table1;
+id,  name,  score,  type
+-------------------------------
+1,  abc,  1.1,  a
+2,  def,  2.3,  b
+3,  ghi,  3.4,  c
+4,  jkl,  4.5,  d
+5,  mno,  5.6,  e
+(5 rows, 0.388 sec, 0 B selected)
+
+SQL 도 사용 가능
+
+
+
+
+
